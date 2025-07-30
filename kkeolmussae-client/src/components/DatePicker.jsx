@@ -13,21 +13,118 @@ const DatePicker = ({ onClose, onSelect }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-xl mb-4">날짜 선택</h2>
-        <select value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="mr-2 p-2 border">
-          {years.map(y => <option key={y} value={y}>{y}년</option>)}
-        </select>
-        <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))} className="p-2 border">
-          {months.map(m => <option key={m} value={m}>{m}월</option>)}
-        </select>
-        <button onClick={handleSubmit} className="ml-4 bg-green-500 text-white px-4 py-2 rounded">
-          확인
-        </button>
-        <button onClick={onClose} className="ml-2 bg-red-500 text-white px-4 py-2 rounded">
-          취소
-        </button>
+    <div style={{ 
+      position: 'fixed', 
+      inset: 0, 
+      backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      zIndex: 1000,
+      backdropFilter: 'blur(5px)'
+    }}>
+      <div style={{ 
+        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+        padding: '32px', 
+        borderRadius: '20px', 
+        boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        maxWidth: '400px',
+        width: '90%'
+      }}>
+        <h2 style={{ 
+          fontSize: '24px', 
+          fontWeight: 'bold', 
+          marginBottom: '24px',
+          textAlign: 'center',
+          color: '#333'
+        }}>
+          📅 날짜 선택
+        </h2>
+        
+        <div style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          marginBottom: '24px',
+          justifyContent: 'center'
+        }}>
+          <select 
+            value={year} 
+            onChange={(e) => setYear(parseInt(e.target.value))} 
+            style={{ 
+              padding: '12px 16px', 
+              border: '2px solid #e5e7eb', 
+              borderRadius: '12px',
+              fontSize: '16px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              ':focus': { borderColor: '#3b82f6', outline: 'none' }
+            }}
+          >
+            {years.map(y => <option key={y} value={y}>{y}년</option>)}
+          </select>
+          
+          <select 
+            value={month} 
+            onChange={(e) => setMonth(parseInt(e.target.value))} 
+            style={{ 
+              padding: '12px 16px', 
+              border: '2px solid #e5e7eb', 
+              borderRadius: '12px',
+              fontSize: '16px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              ':focus': { borderColor: '#3b82f6', outline: 'none' }
+            }}
+          >
+            {months.map(m => <option key={m} value={m}>{m}월</option>)}
+          </select>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          gap: '12px',
+          justifyContent: 'center'
+        }}>
+          <button 
+            onClick={handleSubmit} 
+            style={{ 
+              backgroundColor: '#10b981', 
+              color: 'white', 
+              padding: '12px 24px', 
+              borderRadius: '12px',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              ':hover': { transform: 'translateY(-2px)', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.3)' }
+            }}
+          >
+            ✅ 확인
+          </button>
+          
+          <button 
+            onClick={onClose} 
+            style={{ 
+              backgroundColor: '#ef4444', 
+              color: 'white', 
+              padding: '12px 24px', 
+              borderRadius: '12px',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              ':hover': { transform: 'translateY(-2px)', boxShadow: '0 8px 16px rgba(239, 68, 68, 0.3)' }
+            }}
+          >
+            ❌ 취소
+          </button>
+        </div>
       </div>
     </div>
   );

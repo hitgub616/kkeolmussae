@@ -115,32 +115,41 @@ const HomeScreen = () => {
   return (
     <div style={{ 
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      backgroundColor: 'white',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px'
     }}>
       <div style={{ 
-        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+        backgroundColor: 'white', 
         borderRadius: '30px', 
         padding: '40px', 
         boxShadow: '0 20px 40px rgba(0,0,0,0.1)', 
         textAlign: 'center',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
+        border: '1px solid #e5e7eb',
         maxWidth: '600px',
-        width: '100%'
+        width: '100%',
+        position: 'relative'
       }}>
-        <h1 style={{ 
-          fontSize: '36px', 
-          fontWeight: '700',
-          marginBottom: '30px',
-          color: '#333',
-          textShadow: '0 4px 8px rgba(0,0,0,0.1)'
+        {/* 로고 이미지 */}
+        <div style={{
+          position: 'absolute',
+          top: '-60px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10
         }}>
-          껄무새 🦜
-        </h1>
+          <img 
+            src="/logo.png" 
+            alt="껄무새 로고" 
+            style={{ 
+              width: '120px', 
+              height: 'auto',
+              filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))'
+            }} 
+          />
+        </div>
 
         {/* 말풍선과 앵무새 */}
         <div style={{ 
@@ -152,13 +161,15 @@ const HomeScreen = () => {
           position: 'relative'
         }}>
           <div style={{ 
-            backgroundColor: '#f0f8ff',
-            borderRadius: '20px',
-            padding: '20px',
+            backgroundColor: '#f8fafc',
+            borderRadius: '25px',
+            padding: '25px',
             position: 'relative',
-            border: '2px solid #e0e7ff',
-            boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
-            minWidth: '400px'
+            border: '2px solid #e2e8f0',
+            boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+            minWidth: '400px',
+            // 구름 느낌의 테두리
+            background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)'
           }}>
             <p style={{ 
               fontSize: '20px', 
@@ -271,17 +282,18 @@ const HomeScreen = () => {
               샀으면...
             </p>
             
-            {/* 말풍선 꼬리 */}
+            {/* 말풍선 꼬리 (구름 느낌) */}
             <div style={{
               position: 'absolute',
-              right: '-10px',
+              right: '-15px',
               top: '50%',
               transform: 'translateY(-50%)',
-              width: 0,
-              height: 0,
-              borderTop: '10px solid transparent',
-              borderBottom: '10px solid transparent',
-              borderLeft: '10px solid #e0e7ff'
+              width: '0',
+              height: '0',
+              borderTop: '15px solid transparent',
+              borderBottom: '15px solid transparent',
+              borderLeft: '15px solid #f8fafc',
+              filter: 'drop-shadow(2px 0 2px rgba(0,0,0,0.05))'
             }}></div>
           </div>
           

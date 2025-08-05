@@ -14,7 +14,7 @@ CORS(app)
 
 @app.route('/api/search-stocks', methods=['GET'])
 def search_stocks():
-    """주식 검색 API - 회사명으로 검색"""
+    """주식 검색 API - 실시간 yfinance 검색"""
     try:
         query = request.args.get('q', '').strip()
         if not query:
@@ -22,49 +22,127 @@ def search_stocks():
         
         logger.info(f"Searching for stocks with query: {query}")
         
-        # 샘플 주식 데이터 (yfinance 실패 시 대체용)
-        sample_stocks = [
-            {'symbol': 'AAPL', 'name': 'Apple Inc.', 'shortName': 'Apple'},
-            {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'shortName': 'Microsoft'},
-            {'symbol': 'GOOGL', 'name': 'Alphabet Inc.', 'shortName': 'Alphabet'},
-            {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'shortName': 'Amazon'},
-            {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'shortName': 'Tesla'},
-            {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'shortName': 'NVIDIA'},
-            {'symbol': 'META', 'name': 'Meta Platforms Inc.', 'shortName': 'Meta'},
-            {'symbol': 'NFLX', 'name': 'Netflix Inc.', 'shortName': 'Netflix'},
-            {'symbol': '005930.KS', 'name': 'Samsung Electronics Co Ltd', 'shortName': 'Samsung'},
-            {'symbol': '035420.KS', 'name': 'NAVER Corporation', 'shortName': 'NAVER'},
-            {'symbol': '035720.KS', 'name': 'Kakao Corporation', 'shortName': 'Kakao'},
-            {'symbol': '005380.KS', 'name': 'Hyundai Motor Company', 'shortName': 'Hyundai'},
-            {'symbol': '000660.KS', 'name': 'SK Hynix Inc', 'shortName': 'SK Hynix'},
-            {'symbol': '051910.KS', 'name': 'LG Chem Ltd', 'shortName': 'LG Chem'},
-            {'symbol': '006400.KS', 'name': 'Samsung SDI Co Ltd', 'shortName': 'Samsung SDI'}
-        ]
-        
-        # 쿼리와 매칭되는 주식 필터링
+        # 실시간 yfinance 검색
         matching_stocks = []
-        query_lower = query.lower()
         
-        for stock in sample_stocks:
-            if (query_lower in stock['name'].lower() or 
-                query_lower in stock['shortName'].lower() or 
-                query_lower in stock['symbol'].lower()):
-                matching_stocks.append(stock)
+        try:
+            # 주요 거래소별로 검색 시도
+            search_suffixes = ['', '.KS', '.KQ', '.TO', '.L', '.HK', '.SS', '.SZ', '.T']
+            
+            for suffix in search_suffixes:
+                if len(matching_stocks) >= 20:  # 최대 20개로 제한
+                    break
+                    
+                try:
+                    # 심볼로 직접 검색
+                    symbol = query.upper() + suffix
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+                    
+                    if info and 'symbol' in info and 'longName' in info:
+                        stock_data = {
+                            'symbol': info['symbol'],
+                            'name': info['longName'],
+                            'shortName': info.get('shortName', info['longName'])
+                        }
+                        
+                        # 중복 확인
+                        if not any(s['symbol'] == stock_data['symbol'] for s in matching_stocks):
+                            matching_stocks.append(stock_data)
+                            logger.info(f"Found stock: {stock_data['symbol']} - {stock_data['name']}")
+                            
+                except Exception as e:
+                    logger.debug(f"Failed to get info for {symbol}: {e}")
+                    continue
+            
+            # 추가로 일반적인 검색어 패턴 시도
+            if len(matching_stocks) < 10:
+                common_patterns = [
+                    query.upper(),
+                    query.upper() + 'O',  # 클래스 A/B 주식
+                    query.upper() + 'A',
+                    query.upper() + 'B',
+                ]
+                
+                for pattern in common_patterns:
+                    if len(matching_stocks) >= 20:
+                        break
+                        
+                    try:
+                        ticker = yf.Ticker(pattern)
+                        info = ticker.info
+                        
+                        if info and 'symbol' in info and 'longName' in info:
+                            stock_data = {
+                                'symbol': info['symbol'],
+                                'name': info['longName'],
+                                'shortName': info.get('shortName', info['longName'])
+                            }
+                            
+                            # 중복 확인 및 관련성 확인
+                            if (not any(s['symbol'] == stock_data['symbol'] for s in matching_stocks) and
+                                (query.lower() in stock_data['name'].lower() or 
+                                 query.lower() in stock_data['shortName'].lower() or
+                                 query.lower() in stock_data['symbol'].lower())):
+                                matching_stocks.append(stock_data)
+                                logger.info(f"Found stock: {stock_data['symbol']} - {stock_data['name']}")
+                                
+                    except Exception as e:
+                        logger.debug(f"Failed to get info for {pattern}: {e}")
+                        continue
         
-        # 정확한 매칭 우선 정렬
+        except Exception as e:
+            logger.error(f"Error in yfinance search: {e}")
+        
+        # 백업 샘플 데이터 (yfinance 완전 실패 시)
+        if not matching_stocks:
+            logger.info("yfinance search failed, using backup sample data")
+            sample_stocks = [
+                {'symbol': 'AAPL', 'name': 'Apple Inc.', 'shortName': 'Apple'},
+                {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'shortName': 'Microsoft'},
+                {'symbol': 'GOOGL', 'name': 'Alphabet Inc.', 'shortName': 'Alphabet'},
+                {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'shortName': 'Amazon'},
+                {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'shortName': 'Tesla'},
+                {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'shortName': 'NVIDIA'},
+                {'symbol': 'META', 'name': 'Meta Platforms Inc.', 'shortName': 'Meta'},
+                {'symbol': 'NFLX', 'name': 'Netflix Inc.', 'shortName': 'Netflix'},
+                {'symbol': '005930.KS', 'name': 'Samsung Electronics Co Ltd', 'shortName': 'Samsung'},
+                {'symbol': '035420.KS', 'name': 'NAVER Corporation', 'shortName': 'NAVER'},
+                {'symbol': '035720.KS', 'name': 'Kakao Corporation', 'shortName': 'Kakao'},
+                {'symbol': '005380.KS', 'name': 'Hyundai Motor Company', 'shortName': 'Hyundai'},
+                {'symbol': '000660.KS', 'name': 'SK Hynix Inc', 'shortName': 'SK Hynix'},
+                {'symbol': '051910.KS', 'name': 'LG Chem Ltd', 'shortName': 'LG Chem'},
+                {'symbol': '006400.KS', 'name': 'Samsung SDI Co Ltd', 'shortName': 'Samsung SDI'}
+            ]
+            
+            query_lower = query.lower()
+            for stock in sample_stocks:
+                if (query_lower in stock['name'].lower() or 
+                    query_lower in stock['shortName'].lower() or 
+                    query_lower in stock['symbol'].lower()):
+                    matching_stocks.append(stock)
+        
+        # 관련성에 따른 정렬
         def sort_key(stock):
             name_lower = stock['name'].lower()
             short_name_lower = stock['shortName'].lower()
             symbol_lower = stock['symbol'].lower()
+            query_lower = query.lower()
             
-            # 정확한 매칭이 가장 높은 우선순위
-            if query_lower in name_lower or query_lower in short_name_lower or query_lower in symbol_lower:
+            # 심볼 정확 매칭이 최우선
+            if symbol_lower.startswith(query_lower):
                 return 0
-            # 부분 매칭
-            elif any(word in name_lower for word in query_lower.split()):
+            # 심볼 포함
+            elif query_lower in symbol_lower:
                 return 1
-            else:
+            # 회사명 시작
+            elif name_lower.startswith(query_lower) or short_name_lower.startswith(query_lower):
                 return 2
+            # 회사명 포함
+            elif query_lower in name_lower or query_lower in short_name_lower:
+                return 3
+            else:
+                return 4
         
         matching_stocks.sort(key=sort_key)
         

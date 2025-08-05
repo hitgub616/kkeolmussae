@@ -4,6 +4,9 @@ from flask_cors import CORS
 import yfinance as yf
 from datetime import datetime, timedelta
 import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import signal
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -12,91 +15,64 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
+# 간단한 메모리 캐시 (빠른 응답용)
+search_cache = {}
+cache_lock = threading.Lock()
+
+def get_stock_info_fast(symbol, timeout=2):
+    """빠른 주식 정보 조회 (타임아웃 적용)"""
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(yf.Ticker(symbol).info)
+            return future.result(timeout=timeout)
+    except (TimeoutError, Exception):
+        return None
+
 @app.route('/api/search-stocks', methods=['GET'])
 def search_stocks():
-    """주식 검색 API - 실시간 yfinance 검색"""
+    """주식 검색 API - 초고속 검색 (캐시 + 타임아웃)"""
     try:
         query = request.args.get('q', '').strip()
         if not query:
             return jsonify([])
         
+        # 캐시 확인
+        cache_key = query.upper()
+        with cache_lock:
+            if cache_key in search_cache:
+                cached_time, cached_result = search_cache[cache_key]
+                # 5분 캐시
+                if time.time() - cached_time < 300:
+                    logger.info(f"Cache hit for query: {query}")
+                    return jsonify(cached_result)
+        
         logger.info(f"Searching for stocks with query: {query}")
+        start_time = time.time()
         
-        # 실시간 yfinance 검색
         matching_stocks = []
+        query_upper = query.upper()
         
-        try:
-            # 주요 거래소별로 검색 시도
-            search_suffixes = ['', '.KS', '.KQ', '.TO', '.L', '.HK', '.SS', '.SZ', '.T']
-            
-            for suffix in search_suffixes:
-                if len(matching_stocks) >= 20:  # 최대 20개로 제한
-                    break
-                    
-                try:
-                    # 심볼로 직접 검색
-                    symbol = query.upper() + suffix
-                    ticker = yf.Ticker(symbol)
-                    info = ticker.info
-                    
-                    if info and 'symbol' in info and 'longName' in info:
-                        stock_data = {
-                            'symbol': info['symbol'],
-                            'name': info['longName'],
-                            'shortName': info.get('shortName', info['longName'])
-                        }
-                        
-                        # 중복 확인
-                        if not any(s['symbol'] == stock_data['symbol'] for s in matching_stocks):
-                            matching_stocks.append(stock_data)
-                            logger.info(f"Found stock: {stock_data['symbol']} - {stock_data['name']}")
-                            
-                except Exception as e:
-                    logger.debug(f"Failed to get info for {symbol}: {e}")
-                    continue
-            
-            # 추가로 일반적인 검색어 패턴 시도
-            if len(matching_stocks) < 10:
-                common_patterns = [
-                    query.upper(),
-                    query.upper() + 'O',  # 클래스 A/B 주식
-                    query.upper() + 'A',
-                    query.upper() + 'B',
-                ]
+        # 1단계: 가장 가능성 높은 심볼만 빠르게 확인 (타임아웃 2초)
+        primary_symbols = [query_upper, f"{query_upper}.KS"]
+        
+        for symbol in primary_symbols:
+            if len(matching_stocks) >= 5:  # 더 빠른 응답을 위해 5개로 제한
+                break
                 
-                for pattern in common_patterns:
-                    if len(matching_stocks) >= 20:
-                        break
-                        
-                    try:
-                        ticker = yf.Ticker(pattern)
-                        info = ticker.info
-                        
-                        if info and 'symbol' in info and 'longName' in info:
-                            stock_data = {
-                                'symbol': info['symbol'],
-                                'name': info['longName'],
-                                'shortName': info.get('shortName', info['longName'])
-                            }
-                            
-                            # 중복 확인 및 관련성 확인
-                            if (not any(s['symbol'] == stock_data['symbol'] for s in matching_stocks) and
-                                (query.lower() in stock_data['name'].lower() or 
-                                 query.lower() in stock_data['shortName'].lower() or
-                                 query.lower() in stock_data['symbol'].lower())):
-                                matching_stocks.append(stock_data)
-                                logger.info(f"Found stock: {stock_data['symbol']} - {stock_data['name']}")
-                                
-                    except Exception as e:
-                        logger.debug(f"Failed to get info for {pattern}: {e}")
-                        continue
+            # 2초 타임아웃으로 빠른 검색
+            info = get_stock_info_fast(symbol, timeout=2)
+            if info and 'symbol' in info and 'longName' in info:
+                stock_data = {
+                    'symbol': info['symbol'],
+                    'name': info['longName'],
+                    'shortName': info.get('shortName', info['longName'])
+                }
+                matching_stocks.append(stock_data)
+                logger.info(f"Found stock: {stock_data['symbol']} - {stock_data['name']}")
         
-        except Exception as e:
-            logger.error(f"Error in yfinance search: {e}")
-        
-        # 백업 샘플 데이터 (yfinance 완전 실패 시)
+        # 2단계: 빠른 폴백 - 샘플 데이터 우선 사용
         if not matching_stocks:
-            logger.info("yfinance search failed, using backup sample data")
+            logger.info("Using fast sample data fallback")
             sample_stocks = [
                 {'symbol': 'AAPL', 'name': 'Apple Inc.', 'shortName': 'Apple'},
                 {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'shortName': 'Microsoft'},
@@ -106,13 +82,23 @@ def search_stocks():
                 {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'shortName': 'NVIDIA'},
                 {'symbol': 'META', 'name': 'Meta Platforms Inc.', 'shortName': 'Meta'},
                 {'symbol': 'NFLX', 'name': 'Netflix Inc.', 'shortName': 'Netflix'},
+                {'symbol': 'IBM', 'name': 'International Business Machines Corporation', 'shortName': 'IBM'},
+                {'symbol': 'AMD', 'name': 'Advanced Micro Devices, Inc.', 'shortName': 'AMD'},
+                {'symbol': 'INTC', 'name': 'Intel Corporation', 'shortName': 'Intel'},
+                {'symbol': 'CRM', 'name': 'Salesforce, Inc.', 'shortName': 'Salesforce'},
+                {'symbol': 'ORCL', 'name': 'Oracle Corporation', 'shortName': 'Oracle'},
+                {'symbol': 'ADBE', 'name': 'Adobe Inc.', 'shortName': 'Adobe'},
+                {'symbol': 'SBUX', 'name': 'Starbucks Corporation', 'shortName': 'Starbucks'},
+                {'symbol': 'DIS', 'name': 'The Walt Disney Company', 'shortName': 'Disney'},
+                {'symbol': 'BA', 'name': 'The Boeing Company', 'shortName': 'Boeing'},
+                {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co.', 'shortName': 'JPMorgan'},
+                {'symbol': 'JNJ', 'name': 'Johnson & Johnson', 'shortName': 'J&J'},
+                {'symbol': 'PG', 'name': 'The Procter & Gamble Company', 'shortName': 'P&G'},
                 {'symbol': '005930.KS', 'name': 'Samsung Electronics Co Ltd', 'shortName': 'Samsung'},
                 {'symbol': '035420.KS', 'name': 'NAVER Corporation', 'shortName': 'NAVER'},
                 {'symbol': '035720.KS', 'name': 'Kakao Corporation', 'shortName': 'Kakao'},
                 {'symbol': '005380.KS', 'name': 'Hyundai Motor Company', 'shortName': 'Hyundai'},
-                {'symbol': '000660.KS', 'name': 'SK Hynix Inc', 'shortName': 'SK Hynix'},
-                {'symbol': '051910.KS', 'name': 'LG Chem Ltd', 'shortName': 'LG Chem'},
-                {'symbol': '006400.KS', 'name': 'Samsung SDI Co Ltd', 'shortName': 'Samsung SDI'}
+                {'symbol': '000660.KS', 'name': 'SK Hynix Inc', 'shortName': 'SK Hynix'}
             ]
             
             query_lower = query.lower()
@@ -121,33 +107,38 @@ def search_stocks():
                     query_lower in stock['shortName'].lower() or 
                     query_lower in stock['symbol'].lower()):
                     matching_stocks.append(stock)
+                    if len(matching_stocks) >= 8:  # 빠른 응답
+                        break
         
-        # 관련성에 따른 정렬
+        # 관련성 정렬 (간소화)
         def sort_key(stock):
-            name_lower = stock['name'].lower()
-            short_name_lower = stock['shortName'].lower()
             symbol_lower = stock['symbol'].lower()
+            name_lower = stock['name'].lower()
             query_lower = query.lower()
             
-            # 심볼 정확 매칭이 최우선
             if symbol_lower.startswith(query_lower):
                 return 0
-            # 심볼 포함
             elif query_lower in symbol_lower:
                 return 1
-            # 회사명 시작
-            elif name_lower.startswith(query_lower) or short_name_lower.startswith(query_lower):
+            elif query_lower in name_lower:
                 return 2
-            # 회사명 포함
-            elif query_lower in name_lower or query_lower in short_name_lower:
-                return 3
             else:
-                return 4
+                return 3
         
         matching_stocks.sort(key=sort_key)
+        result = matching_stocks[:8]  # 8개로 제한
         
-        logger.info(f"Found {len(matching_stocks)} stocks for query '{query}'")
-        return jsonify(matching_stocks[:20])  # 최대 20개 결과
+        # 캐시 저장
+        with cache_lock:
+            search_cache[cache_key] = (time.time(), result)
+            # 캐시 크기 제한 (최대 100개)
+            if len(search_cache) > 100:
+                oldest_key = min(search_cache.keys(), key=lambda k: search_cache[k][0])
+                del search_cache[oldest_key]
+        
+        elapsed = time.time() - start_time
+        logger.info(f"Found {len(result)} stocks for query '{query}' in {elapsed:.2f}s")
+        return jsonify(result)
         
     except Exception as e:
         logger.error(f"Error in stock search: {e}")

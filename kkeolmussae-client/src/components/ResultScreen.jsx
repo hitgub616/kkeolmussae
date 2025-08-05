@@ -3,7 +3,7 @@ import { AppContext } from '../context/AppContext.jsx';
 import html2canvas from 'html2canvas';
 
 const ResultScreen = () => {
-  const { result, setPage, stock, date } = useContext(AppContext);
+  const { result, setResult, stock, date } = useContext(AppContext);
   const [isSharing, setIsSharing] = useState(false);
 
   const handleShare = async () => {
@@ -31,6 +31,10 @@ const ResultScreen = () => {
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const handleGoHome = () => {
+    setResult(null); // 결과 상태를 리셋하여 홈 화면으로 돌아가기
   };
 
   // 치킨 계산 (순이익 기준, 치킨 18,000원)
@@ -186,7 +190,7 @@ const ResultScreen = () => {
             fontWeight: '600',
             transition: 'all 0.3s ease'
           }} 
-          onClick={() => setPage('home')}
+          onClick={handleGoHome}
         >
           다시 해보기
         </button>

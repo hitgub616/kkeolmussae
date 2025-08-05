@@ -39,6 +39,16 @@ const ResultScreen = () => {
     const chickenPrice = 18000; // 치킨 가격
     const finalAmount = initialInvestment * (1 + result / 100);
     const chickenCount = Math.round(finalAmount / chickenPrice);
+    
+    // 디버그용 콘솔 로그
+    console.log('치킨 계산:', {
+      initialInvestment: initialInvestment.toLocaleString() + '원',
+      result: result + '%',
+      finalAmount: finalAmount.toLocaleString() + '원',
+      chickenPrice: chickenPrice.toLocaleString() + '원',
+      chickenCount: chickenCount + '마리'
+    });
+    
     return chickenCount;
   };
 
@@ -129,9 +139,18 @@ const ResultScreen = () => {
             fontSize: '24px',
             color: '#92400e',
             fontWeight: '700',
-            margin: '0'
+            margin: '0 0 8px 0'
           }}>
             치킨 {chickenCount}마리! 🍗
+          </p>
+          <p style={{ 
+            fontSize: '14px',
+            color: '#92400e',
+            fontWeight: '500',
+            margin: '0',
+            opacity: 0.8
+          }}>
+            (치킨 가격: 18,000원 기준)
           </p>
         </div>
         

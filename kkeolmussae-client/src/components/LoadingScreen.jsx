@@ -42,8 +42,8 @@ const LoadingScreen = () => {
           top: '50%', 
           left: '50%', 
           transform: 'translate(-50%, -50%)',
-          width: '100%', 
-          height: '100%', 
+          width: '50%', 
+          height: '50%', 
           objectFit: 'cover',
           objectPosition: 'center',
           opacity: 0.7

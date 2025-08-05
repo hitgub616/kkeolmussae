@@ -33,18 +33,18 @@ const ResultScreen = () => {
     }
   };
 
-  // 치킨 계산 (100만원 기준, 치킨 18,000원)
+  // 치킨 계산 (순이익 기준, 치킨 18,000원)
   const calculateChicken = () => {
     const initialInvestment = 1000000; // 100만원
     const chickenPrice = 18000; // 치킨 가격
-    const finalAmount = initialInvestment * (1 + result / 100);
-    const chickenCount = Math.round(finalAmount / chickenPrice);
+    const profit = initialInvestment * (result / 100); // 순이익 (원금 제외)
+    const chickenCount = Math.round(profit / chickenPrice);
     
     // 디버그용 콘솔 로그
-    console.log('치킨 계산:', {
+    console.log('치킨 계산 (순이익 기준):', {
       initialInvestment: initialInvestment.toLocaleString() + '원',
       result: result + '%',
-      finalAmount: finalAmount.toLocaleString() + '원',
+      profit: profit.toLocaleString() + '원',
       chickenPrice: chickenPrice.toLocaleString() + '원',
       chickenCount: chickenCount + '마리'
     });
@@ -133,7 +133,7 @@ const ResultScreen = () => {
             fontWeight: '600',
             margin: '0 0 8px 0'
           }}>
-            🍗 100만원으로 시작했다면...
+            🍗 순이익으로 치킨 몇 마리?
           </p>
           <p style={{ 
             fontSize: '24px',

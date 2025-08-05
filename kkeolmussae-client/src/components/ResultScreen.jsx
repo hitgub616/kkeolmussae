@@ -55,44 +55,45 @@ const ResultScreen = () => {
       height: '100vh', 
       position: 'relative', 
       backgroundColor: '#f0f8ff',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '20px'
     }}>
       <div 
         id="result-content" 
         style={{ 
           backgroundColor: 'rgba(255, 255, 255, 0.95)', 
           borderRadius: '30px', 
-          padding: '32px', 
+          padding: '40px', 
           boxShadow: '0 20px 40px rgba(0,0,0,0.1)', 
           textAlign: 'center',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
-          maxWidth: '500px',
-          width: '90%'
+          maxWidth: '600px',
+          width: '100%'
         }}
       >
         <h2 style={{ 
           fontSize: '28px', 
-          fontWeight: 'bold',
-          marginBottom: '16px',
+          fontWeight: '700',
+          marginBottom: '20px',
           color: '#333'
         }}>
           그때 샀다면 지금쯤...
         </h2>
         <div style={{ 
           fontSize: '48px', 
-          fontWeight: 'bold', 
+          fontWeight: '700', 
           color: result > 0 ? '#10b981' : result < 0 ? '#ef4444' : '#6b7280',
-          marginBottom: '16px',
+          marginBottom: '20px',
           textShadow: '0 4px 8px rgba(0,0,0,0.1)'
         }}>
           {result > 0 ? '+' : ''}{result.toFixed(2)}%
         </div>
         <p style={{ 
-          fontSize: '20px',
+          fontSize: '22px',
           color: mentColor,
-          fontWeight: 'bold',
-          marginBottom: '24px'
+          fontWeight: '600',
+          marginBottom: '30px'
         }}>
           {ment}
         </p>
@@ -100,16 +101,16 @@ const ResultScreen = () => {
           fontSize: '16px', 
           color: '#6b7280',
           backgroundColor: '#f3f4f6',
-          padding: '12px',
+          padding: '16px',
           borderRadius: '12px',
-          marginTop: '16px'
+          fontWeight: '500'
         }}>
           {stock.name} • {new Date(date).getFullYear()}년 {new Date(date).getMonth() + 1}월
         </div>
       </div>
       
       <div style={{ 
-        marginTop: '32px', 
+        marginTop: '40px', 
         display: 'flex', 
         gap: '16px',
         flexWrap: 'wrap',
@@ -125,9 +126,8 @@ const ResultScreen = () => {
             cursor: 'pointer', 
             boxShadow: '0 8px 16px rgba(107, 114, 128, 0.3)',
             fontSize: '16px',
-            fontWeight: 'bold',
-            transition: 'all 0.3s ease',
-            ':hover': { transform: 'translateY(-2px)', boxShadow: '0 12px 20px rgba(107, 114, 128, 0.4)' }
+            fontWeight: '600',
+            transition: 'all 0.3s ease'
           }} 
           onClick={() => setPage('home')}
         >
@@ -143,11 +143,10 @@ const ResultScreen = () => {
             cursor: isSharing ? 'not-allowed' : 'pointer', 
             boxShadow: '0 8px 16px rgba(59, 130, 246, 0.3)',
             fontSize: '16px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             transition: 'all 0.3s ease',
             opacity: isSharing ? 0.7 : 1,
-            transform: isSharing ? 'scale(0.95)' : 'scale(1)',
-            ':hover': isSharing ? {} : { transform: 'translateY(-2px)', boxShadow: '0 12px 20px rgba(59, 130, 246, 0.4)' }
+            transform: isSharing ? 'scale(0.95)' : 'scale(1)'
           }} 
           onClick={handleShare}
           disabled={isSharing}
@@ -156,6 +155,7 @@ const ResultScreen = () => {
         </button>
       </div>
       
+      {/* 앵무새 이미지 */}
       <img 
         src="/kkeolmussae.png" 
         alt="껄무새" 
@@ -163,11 +163,10 @@ const ResultScreen = () => {
           position: 'fixed', 
           bottom: '20px', 
           right: '20px', 
-          width: '60px', 
+          width: '80px', 
           height: 'auto',
           filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
-          transition: 'transform 0.3s ease',
-          ':hover': { transform: 'scale(1.1)' }
+          transition: 'transform 0.3s ease'
         }} 
       />
     </div>

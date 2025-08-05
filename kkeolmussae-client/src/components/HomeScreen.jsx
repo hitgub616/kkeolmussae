@@ -1,17 +1,71 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import DatePicker from './DatePicker.jsx';
-import StockSearchModal from './StockSearchModal.jsx';
 import ResultScreen from './ResultScreen.jsx';
 import axios from 'axios';
 
 const HomeScreen = () => {
   const { stock, setStock, date, setDate, result, setResult } = useContext(AppContext);
   const [showDateModal, setShowDateModal] = useState(false);
-  const [showStockModal, setShowStockModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [stockInput, setStockInput] = useState('');
-  const [selectedStock, setSelectedStock] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // 검색 결과 가져오기
+  const searchStocks = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await axios.get(`/api/search-stocks?q=${encodeURIComponent(query)}`);
+      setSearchResults(response.data);
+      setShowDropdown(true);
+    } catch (error) {
+      console.error('주식 검색 오류:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // 디바운스된 검색
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchStocks(searchQuery);
+      } else {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchRef.current && 
+        !searchRef.current.contains(event.target) &&
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // 결과가 있으면 결과 화면 표시
   if (result !== null) {
@@ -19,7 +73,7 @@ const HomeScreen = () => {
   }
 
   const handleCalculate = async () => {
-    if (!selectedStock || !date) {
+    if (!stock || !date) {
       alert('종목과 날짜를 모두 선택해주세요!');
       return;
     }
@@ -29,7 +83,7 @@ const HomeScreen = () => {
 
     try {
       const response = await axios.post('/api/calculate', {
-        symbol: selectedStock.symbol,
+        symbol: stock.symbol,
         date: date
       });
 
@@ -40,7 +94,6 @@ const HomeScreen = () => {
       const remainingTime = Math.max(0, 5000 - elapsed);
       
       setTimeout(() => {
-        setStock(selectedStock);
         setResult(resultData.return_rate);
         setIsLoading(false);
       }, remainingTime);
@@ -53,8 +106,10 @@ const HomeScreen = () => {
   };
 
   const handleStockSelect = (stock) => {
-    setSelectedStock(stock);
-    setStockInput(stock.name);
+    setStock(stock);
+    setSearchQuery(stock.name);
+    setSearchResults([]);
+    setShowDropdown(false);
   };
 
   return (
@@ -102,14 +157,19 @@ const HomeScreen = () => {
             padding: '20px',
             position: 'relative',
             border: '2px solid #e0e7ff',
-            boxShadow: '0 8px 16px rgba(0,0,0,0.1)'
+            boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+            minWidth: '400px'
           }}>
             <p style={{ 
               fontSize: '20px', 
               fontWeight: '600',
               color: '#333',
               margin: 0,
-              lineHeight: '1.4'
+              lineHeight: '1.4',
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px'
             }}>
               아… <span style={{ 
                 color: '#3b82f6', 
@@ -118,14 +178,97 @@ const HomeScreen = () => {
                 cursor: 'pointer'
               }} onClick={() => setShowDateModal(true)}>
                 {date ? `${new Date(date).getFullYear()}년 ${new Date(date).getMonth() + 1}월` : '[이 때]'}
-              </span> 내가 <span style={{ 
-                color: '#3b82f6', 
-                fontWeight: '700',
-                textDecoration: 'underline',
-                cursor: 'pointer'
-              }} onClick={() => setShowStockModal(true)}>
-                {selectedStock ? selectedStock.name : '[이거]'}
-              </span> 샀으면...
+              </span> 내가 
+              
+              {/* 인라인 검색창 */}
+              <div ref={searchRef} style={{ position: 'relative', display: 'inline-block' }}>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="종목명 입력"
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    fontSize: '20px',
+                    fontWeight: '700',
+                    color: '#3b82f6',
+                    textDecoration: 'underline',
+                    minWidth: '120px',
+                    maxWidth: '200px',
+                    textAlign: 'center'
+                  }}
+                />
+                {isSearching && (
+                  <span style={{
+                    position: 'absolute',
+                    right: '-20px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '14px'
+                  }}>
+                    🔄
+                  </span>
+                )}
+                
+                {/* 드롭다운 결과 */}
+                {showDropdown && searchResults.length > 0 && (
+                  <div
+                    ref={dropdownRef}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: '0',
+                      right: '0',
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                      border: '1px solid #e5e7eb',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      zIndex: 1001,
+                      marginTop: '5px',
+                      minWidth: '250px'
+                    }}
+                  >
+                    {searchResults.map((stockItem, index) => (
+                      <div
+                        key={stockItem.symbol}
+                        onClick={() => handleStockSelect(stockItem)}
+                        style={{
+                          padding: '12px 16px',
+                          cursor: 'pointer',
+                          borderBottom: index < searchResults.length - 1 ? '1px solid #f3f4f6' : 'none',
+                          transition: 'background-color 0.2s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                      >
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#333'
+                        }}>
+                          {stockItem.name}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#6b7280',
+                          fontWeight: '500'
+                        }}>
+                          {stockItem.symbol}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              샀으면...
             </p>
             
             {/* 말풍선 꼬리 */}
@@ -153,55 +296,24 @@ const HomeScreen = () => {
           />
         </div>
 
-        {/* 검색 입력 필드 */}
-        <div style={{ marginBottom: '30px' }}>
-          <div style={{ 
-            position: 'relative',
-            marginBottom: '20px'
-          }}>
-            <input
-              type="text"
-              value={stockInput}
-              onChange={(e) => setStockInput(e.target.value)}
-              onClick={() => setShowStockModal(true)}
-              placeholder="회사명을 입력하세요 (예: Apple, Samsung, Tesla)"
-              style={{
-                width: '100%',
-                padding: '15px 20px',
-                fontSize: '16px',
-                border: '2px solid #e5e7eb',
-                borderRadius: '12px',
-                outline: 'none',
-                transition: 'all 0.3s ease',
-                boxSizing: 'border-box',
-                backgroundColor: 'white'
-              }}
-              readOnly
-            />
-            <div style={{
-              position: 'absolute',
-              right: '15px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              fontSize: '16px',
-              color: '#6b7280'
-            }}>
-              🔍
-            </div>
-          </div>
-          
+        {/* 선택된 종목 정보 */}
+        {stock && (
           <div style={{
-            fontSize: '14px',
+            fontSize: '16px',
             color: '#6b7280',
-            marginBottom: '20px'
+            marginBottom: '30px',
+            padding: '12px 20px',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '12px',
+            fontWeight: '500'
           }}>
-            {selectedStock ? `선택된 종목: ${selectedStock.name} (${selectedStock.symbol})` : '종목을 선택해주세요'}
+            선택된 종목: {stock.name} ({stock.symbol})
           </div>
-        </div>
+        )}
 
         <button 
           onClick={handleCalculate}
-          disabled={!selectedStock || !date || isLoading}
+          disabled={!stock || !date || isLoading}
           style={{ 
             backgroundColor: isLoading ? '#9ca3af' : '#3b82f6', 
             color: 'white', 
@@ -228,14 +340,6 @@ const HomeScreen = () => {
             setDate(selectedDate);
             setShowDateModal(false);
           }} 
-        />
-      )}
-
-      {showStockModal && (
-        <StockSearchModal 
-          isOpen={showStockModal}
-          onClose={() => setShowStockModal(false)} 
-          onSelect={handleStockSelect} 
         />
       )}
     </div>

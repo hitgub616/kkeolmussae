@@ -28,7 +28,8 @@ const LoadingScreen = () => {
     <div style={{ 
       position: 'relative', 
       height: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      overflow: 'hidden'
     }}>
       <video 
         src="/loading.mp4" 
@@ -38,11 +39,13 @@ const LoadingScreen = () => {
         playsInline 
         style={{ 
           position: 'absolute', 
-          top: 0, 
-          left: 0, 
+          top: '50%', 
+          left: '50%', 
+          transform: 'translate(-50%, -50%)',
           width: '100%', 
           height: '100%', 
           objectFit: 'cover',
+          objectPosition: 'center',
           opacity: 0.7
         }} 
       />

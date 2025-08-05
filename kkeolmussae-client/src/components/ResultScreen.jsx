@@ -33,6 +33,15 @@ const ResultScreen = () => {
     }
   };
 
+  // 치킨 계산 (100만원 기준, 치킨 18,000원)
+  const calculateChicken = () => {
+    const initialInvestment = 1000000; // 100만원
+    const chickenPrice = 18000; // 치킨 가격
+    const finalAmount = initialInvestment * (1 + result / 100);
+    const chickenCount = Math.round(finalAmount / chickenPrice);
+    return chickenCount;
+  };
+
   let ment = '';
   let mentColor = '#333';
   if (result > 0) {
@@ -45,6 +54,8 @@ const ResultScreen = () => {
     ment = '변화 없음... 🤔';
     mentColor = '#6b7280';
   }
+
+  const chickenCount = calculateChicken();
 
   return (
     <div style={{ 
@@ -93,10 +104,37 @@ const ResultScreen = () => {
           fontSize: '22px',
           color: mentColor,
           fontWeight: '600',
-          marginBottom: '30px'
+          marginBottom: '20px'
         }}>
           {ment}
         </p>
+        
+        {/* 치킨 계산 결과 */}
+        <div style={{ 
+          backgroundColor: '#fef3c7',
+          borderRadius: '16px',
+          padding: '20px',
+          marginBottom: '20px',
+          border: '2px solid #f59e0b'
+        }}>
+          <p style={{ 
+            fontSize: '18px',
+            color: '#92400e',
+            fontWeight: '600',
+            margin: '0 0 8px 0'
+          }}>
+            🍗 100만원으로 시작했다면...
+          </p>
+          <p style={{ 
+            fontSize: '24px',
+            color: '#92400e',
+            fontWeight: '700',
+            margin: '0'
+          }}>
+            치킨 {chickenCount}마리! 🍗
+          </p>
+        </div>
+        
         <div style={{ 
           fontSize: '16px', 
           color: '#6b7280',

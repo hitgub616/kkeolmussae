@@ -1,6 +1,7 @@
 import { useContext, useState, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext.jsx';
 import DatePicker from './DatePicker.jsx';
+import LoadingScreen from './LoadingScreen.jsx';
 import ResultScreen from './ResultScreen.jsx';
 import axios from 'axios';
 
@@ -112,6 +113,16 @@ const HomeScreen = () => {
     setShowDropdown(false);
   };
 
+  // 로딩 상태일 때 LoadingScreen 표시
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // 결과가 있을 때 ResultScreen 표시
+  if (result !== null) {
+    return <ResultScreen />;
+  }
+
   return (
     <div style={{ 
       minHeight: '100vh',
@@ -119,8 +130,28 @@ const HomeScreen = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      padding: '20px',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
+      {/* 배경 비디오 */}
+      <video 
+        src="/loading.mp4" 
+        autoPlay 
+        loop 
+        muted 
+        playsInline 
+        style={{ 
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'auto',
+          height: '60vh', // 화면에 꽉 차지 않게 60% 높이로 제한
+          zIndex: -1,
+          opacity: 0.3 // 배경이므로 투명도 낮춤
+        }} 
+      />
       <div style={{ 
         backgroundColor: 'white', 
         borderRadius: '30px', 
